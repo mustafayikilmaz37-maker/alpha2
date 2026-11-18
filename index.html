@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LifeRPG: Hayvan Evrimi & Kişisel Gelişim</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .trophy-locked { filter: grayscale(100%) opacity(0.25); transform: scale(0.95); }
+        .trophy-unlocked { filter: grayscale(0%) opacity(100%); transform: scale(1.05); animation: pulseGlow 2s infinite alternate; }
+        @keyframes pulseGlow { 0% { filter: drop-shadow(0 0 5px rgba(234,179,8,0.4)); } 100% { filter: drop-shadow(0 0 20px rgba(234,179,8,0.9)); } }
+    </style>
+</head>
+<body class="bg-gray-950 text-gray-100 font-sans min-h-screen flex flex-col relative">
+
+    <!-- Üst Header / Stat Bar -->
+    <header class="bg-gray-900 border-b border-gray-800 p-4 sticky top-0 z-40">
+        <div class="max-w-5xl mx-auto flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div id="avatar-icon" class="text-4xl p-2 bg-gray-800 rounded-2xl border border-gray-700 shadow-inner">🪰</div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span id="player-title" class="font-bold text-lg text-yellow-400">Ezik Sinek</span>
+                        <span id="player-level" class="bg-yellow-500/20 text-yellow-300 text-xs px-2 py-0.5 rounded-full border border-yellow-500/30">Lvl 1</span>
+                    </div>
+                    <p id="player-quote" class="text-xs text-gray-400 italic">"Gözle bile görülmüyorsun, tıkla ve bir şeyler yap!"</p>
+                </div>
+            </div>
+
+            <div class="flex-1 min-w-[220px] max-w-md space-y-2">
+                <div>
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="text-red-400 font-bold"><i class="fa-solid fa-heart mr-1"></i>CAN (HP)</span>
+                        <span id="hp-text" class="text-gray-300">100 / 100</span>
+                    </div>
+                    <div class="w-full bg-gray-800 h-3 rounded-full overflow-hidden border border-gray-700">
+                        <div id="hp-bar" class="bg-red-600 h-full transition-all duration-300" style="width: 100%"></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="text-blue-400 font-bold"><i class="fa-solid fa-bolt mr-1"></i>TECRÜBE (XP)</span>
+                        <span id="xp-text" class="text-gray-300">0 / 100</span>
+                    </div>
+                    <div class="w-full bg-gray-800 h-3 rounded-full overflow-hidden border border-gray-700">
+                        <div id="xp-bar" class="bg-blue-500 h-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="healPlayer()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-2 rounded-xl transition flex items-center gap-1 shadow-lg cursor-pointer">
+                <i class="fa-solid fa-kit-medical"></i> +20 HP
+            </button>
+        </div>
+    </header>
+
+    <!-- Navigasyon Sekmeleri -->
+    <nav class="bg-gray-900/80 border-b border-gray-800 backdrop-blur">
+        <div class="max-w-5xl mx-auto flex justify-around text-xs sm:text-sm">
+            <button onclick="switchTab('tasks')" id="tab-tasks" class="tab-btn py-3 px-3 text-yellow-400 border-b-2 border-yellow-400 font-semibold flex items-center gap-1.5 cursor-pointer">
+                <i class="fa-solid fa-list-check"></i> Görevler
+            </button>
+            <button onclick="switchTab('trophies')" id="tab-trophies" class="tab-btn py-3 px-3 text-gray-400 hover:text-gray-200 font-semibold flex items-center gap-1.5 cursor-pointer">
+                <i class="fa-solid fa-trophy"></i> Kupa Odası
+            </button>
+            <button onclick="switchTab('calendar')" id="tab-calendar" class="tab-btn py-3 px-3 text-gray-400 hover:text-gray-200 font-semibold flex items-center gap-1.5 cursor-pointer">
+                <i class="fa-solid fa-calendar-days"></i> Takvim
+            </button>
+            <button onclick="switchTab('analytics')" id="tab-analytics" class="tab-btn py-3 px-3 text-gray-400 hover:text-gray-200 font-semibold flex items-center gap-1.5 cursor-pointer">
+                <i class="fa-solid fa-chart-pie"></i> Analiz & Bildirim
+            </button>
+        </div>
+    </nav>
+
+    <!-- Ana İçerik -->
+    <main class="flex-1 max-w-5xl w-full mx-auto p-4 space-y-6">
+
+        <!-- 1. SEKME: GÖREVLER -->
+        <section id="sec-tasks" class="space-y-6">
+            
+            <!-- Büyük ve Sabit Görev Ekleme Alanı -->
+            <div class="bg-gray-900 p-4 rounded-2xl border border-gray-800 shadow-md space-y-3">
+                <h3 class="text-sm font-bold text-yellow-400 flex items-center gap-2">
+                    <i class="fa-solid fa-plus-circle"></i> Yeni Görev Tanımla
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <input type="text" id="task-name" placeholder="Görev Adı (örn: 30 Dk Kitap Okuma)" class="bg-gray-800 border border-gray-700 text-xs rounded-xl px-3 py-2 text-white focus:outline-none focus:border-yellow-500 md:col-span-1">
+                    <select id="task-cat" class="bg-gray-800 border border-gray-700 text-xs rounded-xl px-3 py-2 text-white focus:outline-none focus:border-yellow-500">
+                        <option value="zeka">🧠 Zeka & Zihin</option>
+                        <option value="egzersiz">💪 Fiziksel Egzersiz & Ruh</option>
+                        <option value="uretkenlik">⚡ Üretkenlik & Günlük İşler</option>
+                        <option value="beslenme">🍏 Beslenme & Yaşam Enerjisi</option>
+                    </select>
+                    <input type="number" id="task-xp" placeholder="XP Ödülü (Örn: 25)" min="5" max="200" value="25" class="bg-gray-800 border border-gray-700 text-xs rounded-xl px-3 py-2 text-white focus:outline-none focus:border-yellow-500">
+                    <button type="button" onclick="addNewTask()" class="bg-yellow-500 hover:bg-yellow-400 text-gray-950 font-bold rounded-xl px-4 py-2 text-xs transition cursor-pointer shadow-md">
+                        <i class="fa-solid fa-check mr-1"></i> Görevi Kaydet
+                    </button>
+                </div>
+            </div>
+
+            <!-- Görev Listeleri -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-gray-900 rounded-2xl p-4 border border-blue-900/40">
+                    <h3 class="text-blue-400 font-bold text-sm mb-3 flex items-center gap-2"><i class="fa-solid fa-brain"></i> Zihinsel Gelişim & Zeka</h3>
+                    <div id="list-zeka" class="space-y-2"></div>
+                </div>
+
+                <div class="bg-gray-900 rounded-2xl p-4 border border-red-900/40">
+                    <h3 class="text-red-400 font-bold text-sm mb-3 flex items-center gap-2"><i class="fa-solid fa-dumbbell"></i> Fiziksel Egzersiz & Ruh</h3>
+                    <div id="list-egzersiz" class="space-y-2"></div>
+                </div>
+
+                <div class="bg-gray-900 rounded-2xl p-4 border border-amber-900/40">
+                    <h3 class="text-amber-400 font-bold text-sm mb-3 flex items-center gap-2"><i class="fa-solid fa-list-check"></i> Üretkenlik & Günlük İşler</h3>
+                    <div id="list-uretkenlik" class="space-y-2"></div>
+                </div>
+
+                <div class="bg-gray-900 rounded-2xl p-4 border border-emerald-900/40">
+                    <h3 class="text-emerald-400 font-bold text-sm mb-3 flex items-center gap-2"><i class="fa-solid fa-apple-whole"></i> Beslenme & Yaşam Enerjisi</h3>
+                    <div id="list-beslenme" class="space-y-2"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. SEKME: KUPA ODASI -->
+        <section id="sec-trophies" class="hidden space-y-6">
+            <div class="bg-gray-900/90 p-5 rounded-2xl border border-gray-800 text-center">
+                <h2 class="text-lg font-bold text-yellow-400 mb-1">🏛️ Karanlık Kupa Müzesi</h2>
+                <p class="text-xs text-gray-400">Görevleri tamamla, kupaları ait olduğu ışıltılı renklere kavuştur!</p>
+            </div>
+
+            <div class="bg-gray-900 p-6 rounded-3xl border border-yellow-500/20 text-center shadow-2xl">
+                <div class="text-[10px] text-yellow-500 uppercase tracking-widest font-bold mb-2">Ayın En Büyük Ödülü</div>
+                <div id="monthly-trophy-card" class="trophy-locked transition-all duration-700 inline-block">
+                    <div class="text-6xl mb-2">👑</div>
+                    <h3 class="text-base font-extrabold text-yellow-400">İHTİŞAMLI AYLIK ŞAMPİYON KUPASI</h3>
+                    <p class="text-xs text-gray-400 max-w-xs mx-auto mt-1">Tüm hedeflere ulaşıldığında aktifleşir!</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="trophy-grid"></div>
+        </section>
+
+        <!-- 3. SEKME: TAKVİM -->
+        <section id="sec-calendar" class="hidden space-y-6">
+            <div class="bg-gray-900 p-5 rounded-2xl border border-gray-800">
+                <h2 class="text-base font-bold text-gray-200 mb-4"><i class="fa-solid fa-calendar-days text-yellow-400 mr-2"></i>Aktivite Takvimi</h2>
+                <div class="grid grid-cols-7 gap-2 text-center text-xs text-gray-400 mb-2 font-semibold">
+                    <div>Pzt</div><div>Sal</div><div>Çar</div><div>Per</div><div>Cum</div><div>Cmt</div><div>Paz</div>
+                </div>
+                <div id="calendar-days" class="grid grid-cols-7 gap-2"></div>
+            </div>
+        </section>
+
+        <!-- 4. SEKME: ANALİZ & BİLDİRİM -->
+        <section id="sec-analytics" class="hidden space-y-6">
+            <div class="bg-gray-900 p-5 rounded-2xl border border-gray-800 space-y-4">
+                <h2 class="text-base font-bold text-gray-200"><i class="fa-solid fa-chart-pie text-blue-400 mr-2"></i>Gelişim Grafiği & Başarı</h2>
+                <div class="space-y-3" id="analysis-cards"></div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        const TROPHIES_DEF = [
+            { cat: 'zeka', title: 'Zeka Kupası', icon: '🧠', color: 'text-blue-400' },
+            { cat: 'egzersiz', title: 'Fizik Kupası', icon: '💪', color: 'text-red-400' },
+            { cat: 'uretkenlik', title: 'Üretkenlik Kupası', icon: '⚡', color: 'text-amber-400' },
+            { cat: 'beslenme', title: 'Beslenme Kupası', icon: '🍏', color: 'text-emerald-400' }
+        ];
+
+        let state;
+        try {
+            state = JSON.parse(localStorage.getItem('lifeRpgState')) || null;
+        } catch(e) {
+            state = null;
+        }
+
+        if (!state) {
+            state = {
+                level: 1, hp: 100, xp: 0,
+                earnedTrophies: [],
+                tasks: [
+                    { id: 1, name: '30 Dk Kitap Okuma', cat: 'zeka', xp: 25, done: false },
+                    { id: 2, name: '45 Dk Antrenman', cat: 'egzersiz', xp: 50, done: false },
+                    { id: 3, name: 'Öncelikli 3 İş', cat: 'uretkenlik', xp: 30, done: false },
+                    { id: 4, name: '2 Litre Su Tüketimi', cat: 'beslenme', xp: 15, done: false }
+                ]
+            };
+        }
+
+        function saveState() {
+            localStorage.setItem('lifeRpgState', JSON.stringify(state));
+            render();
+        }
+
+        function getXpRequired(l) { return Math.floor(100 * Math.pow(l, 1.35)); }
+
+        function toggleTask(id) {
+            const task = state.tasks.find(t => t.id === id);
+            if (!task) return;
+            task.done = !task.done;
+            if (task.done) {
+                state.xp += task.xp;
+                checkTrophies();
+            } else {
+                state.xp = Math.max(0, state.xp - task.xp);
+            }
+            saveState();
+        }
+
+        function healPlayer() {
+            state.hp = Math.min(100, state.hp + 20);
+            saveState();
+        }
+
+        function checkTrophies() {
+            TROPHIES_DEF.forEach(td => {
+                const catTasks = state.tasks.filter(t => t.cat === td.cat);
+                if (catTasks.length > 0 && catTasks.every(t => t.done)) {
+                    if (!state.earnedTrophies.includes(td.cat)) state.earnedTrophies.push(td.cat);
+                }
+            });
+            if (state.tasks.length > 0 && state.tasks.every(t => t.done)) {
+                if (!state.earnedTrophies.includes('monthly')) state.earnedTrophies.push('monthly');
+            }
+        }
+
+        function render() {
+            document.getElementById('hp-text').innerText = `${Math.round(state.hp)} / 100`;
+            document.getElementById('hp-bar').style.width = `${state.hp}%`;
+            document.getElementById('xp-text').innerText = `${state.xp} / ${getXpRequired(state.level)}`;
+            document.getElementById('xp-bar').style.width = `${Math.min(100, (state.xp / getXpRequired(state.level))*100)}%`;
+
+            // Render Tasks
+            ['zeka', 'egzersiz', 'uretkenlik', 'beslenme'].forEach(cat => {
+                const container = document.getElementById(`list-${cat}`);
+                const tasks = state.tasks.filter(t => t.cat === cat);
+                container.innerHTML = '';
+                
+                if(tasks.length === 0) {
+                    container.innerHTML = `<p class="text-[11px] text-gray-500 italic">Bu kategoride görev yok.</p>`;
+                    return;
+                }
+
+                tasks.forEach(t => {
+                    const d = document.createElement('div');
+                    d.className = `flex items-center justify-between p-2 rounded-xl border ${t.done ? 'bg-gray-950/40 border-gray-800 opacity-60' : 'bg-gray-800 border-gray-700'}`;
+                    d.innerHTML = `
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" ${t.done?'checked':''} onchange="toggleTask(${t.id})" class="w-4 h-4 text-yellow-500 rounded cursor-pointer">
+                            <span class="text-xs font-medium ${t.done?'line-through text-gray-500':'text-gray-200'}">${t.name}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] bg-blue-950 text-blue-300 font-bold px-2 py-0.5 rounded-full">+${t.xp} XP</span>
+                            <button onclick="deleteTask(${t.id})" class="text-gray-500 hover:text-red-400 text-xs px-1 cursor-pointer"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    `;
+                    container.appendChild(d);
+                });
+            });
+
+            // Render Trophies
+            const monthlyCard = document.getElementById('monthly-trophy-card');
+            monthlyCard.className = state.earnedTrophies.includes('monthly') ? "trophy-unlocked inline-block" : "trophy-locked inline-block";
+
+            const grid = document.getElementById('trophy-grid');
+            grid.innerHTML = '';
+            TROPHIES_DEF.forEach(td => {
+                const isUnlocked = state.earnedTrophies.includes(td.cat);
+                const div = document.createElement('div');
+                div.className = `p-4 rounded-2xl border text-center bg-gray-900 transition-all ${isUnlocked ? 'trophy-unlocked border-yellow-500/40' : 'trophy-locked border-gray-800'}`;
+                div.innerHTML = `
+                    <div class="text-4xl mb-1">${td.icon}</div>
+                    <div class="text-xs font-bold ${td.color}">${td.title}</div>
+                    <div class="text-[10px] text-gray-500 mt-1">${isUnlocked ? 'Kazanıldı ✨' : 'Karanlık'}</div>
+                `;
+                grid.appendChild(div);
+            });
+
+            // Render Calendar Days
+            const calDays = document.getElementById('calendar-days');
+            calDays.innerHTML = '';
+            for(let i=1; i<=30; i++) {
+                const div = document.createElement('div');
+                div.className = "p-2 rounded-xl bg-gray-900 border border-gray-800 text-center text-xs text-gray-400";
+                div.innerHTML = `<span class="font-bold">${i}</span>`;
+                calDays.appendChild(div);
+            }
+
+            // Render Analytics Bars
+            const analytics = document.getElementById('analysis-cards');
+            analytics.innerHTML = '';
+            ['zeka', 'egzersiz', 'uretkenlik', 'beslenme'].forEach(c => {
+                const tasks = state.tasks.filter(t => t.cat === c);
+                const done = tasks.filter(t => t.done).length;
+                const pct = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
+
+                const div = document.createElement('div');
+                div.className = "space-y-1";
+                div.innerHTML = `
+                    <div class="flex justify-between text-xs">
+                        <span class="capitalize font-bold text-gray-300">${c}</span>
+                        <span class="text-yellow-400 font-bold">%${pct}</span>
+                    </div>
+                    <div class="w-full bg-gray-800 h-2.5 rounded-full overflow-hidden border border-gray-700">
+                        <div class="bg-yellow-500 h-full transition-all duration-500" style="width: ${pct}%"></div>
+                    </div>
+                `;
+                analytics.appendChild(div);
+            });
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
+            document.getElementById(`sec-${tabId}`).classList.remove('hidden');
+
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                b.classList.remove('text-yellow-400', 'border-b-2', 'border-yellow-400');
+                b.classList.add('text-gray-400');
+            });
+            document.getElementById(`tab-${tabId}`).classList.add('text-yellow-400', 'border-b-2', 'border-yellow-400');
+        }
+
+        function addNewTask() {
+            const nameInput = document.getElementById('task-name');
+            const catInput = document.getElementById('task-cat');
+            const xpInput = document.getElementById('task-xp');
+
+            const name = nameInput.value.trim();
+            const cat = catInput.value;
+            const xp = parseInt(xpInput.value) || 20;
+
+            if (!name) {
+                alert("Lütfen bir görev adı yazın!");
+                return;
+            }
+
+            state.tasks.push({
+                id: Date.now(),
+                name: name,
+                cat: cat,
+                xp: xp,
+                done: false
+            });
+
+            nameInput.value = '';
+            saveState();
+        }
+
+        function deleteTask(id) {
+            state.tasks = state.tasks.filter(t => t.id !== id);
+            saveState();
+        }
+
+        render();
+    </script>
+</body>
+</html>
